@@ -409,12 +409,20 @@
                             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-black/25">+12</span>
                         </button>
 
-                        <button type="button" data-kong="KONG_BUANGAN" onclick="setKongType('KONG_BUANGAN')" class="kong-type-btn sm:col-span-2 px-3 py-2.5 rounded-xl border text-left transition flex items-center justify-between">
+                        <button type="button" data-kong="KONG_BUANGAN" onclick="setKongType('KONG_BUANGAN')" class="kong-type-btn px-3 py-2.5 rounded-xl border text-left transition flex items-center justify-between">
                             <div>
                                 <div class="font-bold text-sm">Kong Buangan</div>
-                                <div class="text-[11px] opacity-80">2 poin dari yang buang, pemain lainnya 1 poin</div>
+                                <div class="text-[11px] opacity-80">2 dari pembuang, lainnya 1 poin</div>
                             </div>
                             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-black/25">+4</span>
+                        </button>
+
+                        <button type="button" data-kong="KONG_BUANGAN_ZHONG" onclick="setKongType('KONG_BUANGAN_ZHONG')" class="kong-type-btn px-3 py-2.5 rounded-xl border text-left transition flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-sm">Kong Buangan 中</div>
+                                <div class="text-[11px] opacity-80">4 dari pembuang, lainnya 2 poin</div>
+                            </div>
+                            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-black/25">+8</span>
                         </button>
                     </div>
                 </div>
@@ -502,7 +510,6 @@
                 } else {
                     d += `L ${x1.toFixed(2)},${y1.toFixed(2)} `;
                 }
-                // Busur luar -> turun ke dalam -> busur dalam -> naik lagi di iterasi berikutnya
                 d += `A ${rOuter},${rOuter} 0 0,1 ${x2.toFixed(2)},${y2.toFixed(2)} `;
                 d += `L ${x3.toFixed(2)},${y3.toFixed(2)} `;
                 d += `A ${rInner},${rInner} 0 0,1 ${x4.toFixed(2)},${y4.toFixed(2)} `;
@@ -519,7 +526,7 @@
             { key: 'N', name: 'North', label: 'Utara', kanji: '北', color: 'text-sky-300 border-sky-400/50 bg-sky-950/50' }
         ];
 
-        const STORAGE_KEY = 'mahjong_point_tables_v1';
+        const STORAGE_KEY = 'mahjong_point_tables_v2';
         let activeTableId = 1;
         let tablesData = {};
 
@@ -542,63 +549,46 @@
             AN_KONG: { label: 'An Kong', badge: 'AN KONG', otherPay: 2, discarderPay: 2, isDiscard: false },
             KONG_ZHONG: { label: 'Kong 中', badge: 'KONG 中', otherPay: 2, discarderPay: 2, isDiscard: false },
             AN_KONG_ZHONG: { label: 'An Kong 中', badge: 'AN KONG 中', otherPay: 4, discarderPay: 4, isDiscard: false },
-            KONG_BUANGAN: { label: 'Kong Buangan', badge: 'KONG BUANGAN', otherPay: 1, discarderPay: 2, isDiscard: true }
+            KONG_BUANGAN: { label: 'Kong Buangan', badge: 'KONG BUANGAN', otherPay: 1, discarderPay: 2, isDiscard: true },
+            KONG_BUANGAN_ZHONG: { label: 'Kong Buangan 中', badge: 'KONG BUANGAN 中', otherPay: 2, discarderPay: 4, isDiscard: true }
         };
 
-        // Struktur default untuk 1 meja
-        function createDefaultTable(tableNumber) {
-            return {
-                id: tableNumber,
-                prevailingWindIdx: 0, // 0: East, 1: South, 2: West, 3: North
-                handNumber: 1,        // 1 - 4
-                players: [
-                    { name: 'Pemain 1', windIdx: 0, score: 0 },
-                    { name: 'Pemain 2', windIdx: 1, score: 0 },
-                    { name: 'Pemain 3', windIdx: 2, score: 0 },
-                    { name: 'Pemain 4', windIdx: 3, score: 0 }
-                ],
-                history: []
-            };
-        }
-
-        // Memuat data dari localStorage
+        // Inisialisasi atau muat state dari localStorage
         function loadState() {
-            try {
-                const raw = localStorage.getItem(STORAGE_KEY);
-                if (raw) {
-                    const parsed = JSON.parse(raw);
-                    tablesData = parsed.tables || {};
-                    activeTableId = parsed.activeTableId || 1;
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    tablesData = JSON.parse(saved);
+                } catch (e) {
+                    tablesData = {};
                 }
-            } catch (e) {
-                console.error("Gagal memuat penyimpanan lokal:", e);
             }
 
-            // Pastikan Meja 1 sampai Meja 8 selalu tersedia
             for (let i = 1; i <= 8; i++) {
                 if (!tablesData[i]) {
-                    tablesData[i] = createDefaultTable(i);
+                    tablesData[i] = {
+                        prevailingWindIdx: 0,
+                        handNumber: 1,
+                        players: [
+                            { name: 'Pemain 1', score: 0, windIdx: 0 },
+                            { name: 'Pemain 2', score: 0, windIdx: 1 },
+                            { name: 'Pemain 3', score: 0, windIdx: 2 },
+                            { name: 'Pemain 4', score: 0, windIdx: 3 }
+                        ],
+                        history: []
+                    };
                 }
             }
         }
 
-        // Menyimpan data ke localStorage
         function saveState() {
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                    activeTableId,
-                    tables: tablesData
-                }));
-            } catch (e) {
-                console.error("Gagal menyimpan ke localStorage:", e);
-            }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(tablesData));
         }
 
         function getCurrentTable() {
             return tablesData[activeTableId];
         }
 
-        // 3. RENDER UI UTAMA
         function renderAll() {
             renderTableTabs();
             renderHeaderInfo();
@@ -606,7 +596,6 @@
             renderHistoryTable();
         }
 
-        // Render Tab Pilihan Meja 1 - 8
         function renderTableTabs() {
             const container = document.getElementById('tableTabsContainer');
             container.innerHTML = '';
@@ -648,7 +637,6 @@
             document.getElementById('historyTableNumber').textContent = activeTableId;
             document.getElementById('totalRoundsCount').textContent = table.history.length;
 
-            // Cek Zero-Sum Balance
             const totalSum = table.players.reduce((acc, p) => acc + p.score, 0);
             const badge = document.getElementById('balanceCheckBadge');
             if (totalSum === 0) {
@@ -660,13 +648,11 @@
             }
         }
 
-        // Render 4 Kartu Pemain
         function renderPlayersGrid() {
             const table = getCurrentTable();
             const grid = document.getElementById('playersGrid');
             grid.innerHTML = '';
 
-            // Cari skor tertinggi untuk mahkota pemimpin
             const maxScore = Math.max(...table.players.map(p => p.score));
 
             table.players.forEach((player, idx) => {
@@ -683,7 +669,6 @@
 
                 card.innerHTML = `
                     <div>
-                        <!-- Header Kartu: Angin & Dealer Badge -->
                         <div class="flex items-center justify-between gap-2 mb-3">
                             <button onclick="cycleSinglePlayerWind(${idx})" title="Klik untuk ganti posisi angin pemain ini" class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-bold transition hover:brightness-110 ${wind.color}">
                                 <span class="text-base leading-none">${wind.kanji}</span>
@@ -696,7 +681,6 @@
                             </div>
                         </div>
 
-                        <!-- Input Nama Pemain (Editable langsung) -->
                         <div class="mb-3">
                             <input 
                                 type="text" 
@@ -709,7 +693,6 @@
                         </div>
                     </div>
 
-                    <!-- Tampilan Skor Besar -->
                     <div class="pt-2 border-t border-bronzeGold/20 flex items-baseline justify-between">
                         <span class="text-[11px] uppercase tracking-wider text-bronzeLight/70 font-semibold">Total Poin</span>
                         <span class="text-3xl font-extrabold tracking-tight ${scoreColor}">
@@ -721,13 +704,11 @@
             });
         }
 
-        // Render Tabel Riwayat Ronde
         function renderHistoryTable() {
             const table = getCurrentTable();
             const tbody = document.getElementById('historyTableBody');
             const btnDeleteLast = document.getElementById('btnDeleteLast');
 
-            // Update header nama pemain di tabel
             table.players.forEach((p, idx) => {
                 const th = document.getElementById(`thP${idx}`);
                 if (th) th.textContent = p.name;
@@ -747,7 +728,6 @@
                 return;
             }
 
-            // Tampilkan dari ronde terbaru ke terlama
             tbody.innerHTML = [...table.history].reverse().map((item, revIdx) => {
                 const roundNum = table.history.length - revIdx;
                 const isLatest = (revIdx === 0);
@@ -781,7 +761,6 @@
             }).join('');
         }
 
-        // 4. MANAJEMEN PEMAIN & ANGIN
         function updatePlayerName(idx, newName) {
             const trimmed = newName.trim() || `Pemain ${idx + 1}`;
             getCurrentTable().players[idx].name = trimmed;
@@ -798,7 +777,6 @@
 
         function rotateWinds(silent = false) {
             const table = getCurrentTable();
-            // Geser angin setiap pemain (East -> North -> West -> South -> East sesuai rotasi dealer)
             table.players.forEach(p => {
                 p.windIdx = (p.windIdx + 3) % 4;
             });
@@ -817,7 +795,6 @@
             }
         }
 
-        // Mengembalikan rotasi angin mundur 1 langkah (digunakan saat menghapus/undo ronde yang memutar angin)
         function reverseRotateWinds() {
             const table = getCurrentTable();
             table.players.forEach(p => {
@@ -831,7 +808,6 @@
             }
         }
 
-        // 5. LOGIKA KALKULATOR SKOR RONDE (ZIMO & RON)
         function openScoreModal() {
             const table = getCurrentTable();
             document.getElementById('modalTableNum').textContent = activeTableId;
@@ -867,7 +843,6 @@
                 discarderSec.classList.remove('hidden');
                 ruleHint.innerHTML = `• <strong>Ron</strong>: Pemain yang membuang dikali <strong>2x</strong> poin dasar, sedangkan 2 pemain lainnya tetap dikurangi <strong>1x</strong> poin dasar (pemenang +4x).`;
                 
-                // Pastikan discarder tidak sama dengan winner
                 if (modalState.discarderIdx === modalState.winnerIdx) {
                     modalState.discarderIdx = (modalState.winnerIdx + 1) % 4;
                 }
@@ -888,7 +863,6 @@
                 const wind = WINDS[p.windIdx];
                 const isWinner = (idx === modalState.winnerIdx);
 
-                // Tombol Pemenang
                 const wBtn = document.createElement('button');
                 wBtn.type = 'button';
                 wBtn.onclick = () => {
@@ -910,7 +884,6 @@
                 `;
                 wGrid.appendChild(wBtn);
 
-                // Tombol Discarder (selain pemenang)
                 if (!isWinner) {
                     const isDiscarder = (idx === modalState.discarderIdx);
                     const dBtn = document.createElement('button');
@@ -947,7 +920,6 @@
             updateScorePreview();
         }
 
-        // Menghitung array perubahan poin [d0, d1, d2, d3] yang selalu Zero-Sum
         function calculateRoundDeltas() {
             const table = getCurrentTable();
             const base = Math.max(1, parseInt(document.getElementById('basePointsInput').value) || 1);
@@ -959,7 +931,6 @@
             const winnerIsEast = (table.players[wIdx].windIdx === 0);
 
             if (modalState.winType === 'ZIMO') {
-                // ZIMO: Tiap pemain lain langsung dikali 2 poin pengurangannya
                 for (let i = 0; i < 4; i++) {
                     if (i === wIdx) continue;
                     const loserIsEast = (table.players[i].windIdx === 0);
@@ -971,7 +942,6 @@
                     deltas[wIdx] += pay;
                 }
             } else {
-                // RON: Pemain yang membuang dikali 2, yang lain tetap dikurangi 1x poin dasar
                 for (let i = 0; i < 4; i++) {
                     if (i === wIdx) continue;
                     const loserIsEast = (table.players[i].windIdx === 0);
@@ -1011,7 +981,6 @@
             const winner = table.players[modalState.winnerIdx];
             const pWind = WINDS[table.prevailingWindIdx];
 
-            // Terapkan skor ke tiap pemain
             deltas.forEach((d, idx) => {
                 table.players[idx].score += d;
             });
@@ -1047,7 +1016,6 @@
             }
         }
 
-        // 5B. LOGIKA PEMBAYARAN INSTAN KONG
         function openKongModal() {
             document.getElementById('kongModalTableNum').textContent = activeTableId;
             kongState.kongPlayerIdx = 0;
@@ -1063,17 +1031,15 @@
             kongState.kongType = type;
             const rule = KONG_RULES[type];
 
-            // Update tampilan tombol jenis Kong
             document.querySelectorAll('.kong-type-btn').forEach(btn => {
                 const isSelected = btn.getAttribute('data-kong') === type;
                 if (isSelected) {
-                    btn.className = `kong-type-btn ${type === 'KONG_BUANGAN' ? 'sm:col-span-2' : ''} px-3 py-2.5 rounded-xl border-2 border-bronzeGold bg-bronzeGold text-emeraldDark text-left transition flex items-center justify-between shadow`;
+                    btn.className = `kong-type-btn px-3 py-2.5 rounded-xl border-2 border-bronzeGold bg-bronzeGold text-emeraldDark text-left transition flex items-center justify-between shadow`;
                 } else {
-                    btn.className = `kong-type-btn ${btn.getAttribute('data-kong') === 'KONG_BUANGAN' ? 'sm:col-span-2' : ''} px-3 py-2.5 rounded-xl border border-bronzeGold/30 bg-emeraldDark/80 text-creamText/85 hover:border-bronzeGold/70 text-left transition flex items-center justify-between`;
+                    btn.className = `kong-type-btn px-3 py-2.5 rounded-xl border border-bronzeGold/30 bg-emeraldDark/80 text-creamText/85 hover:border-bronzeGold/70 text-left transition flex items-center justify-between`;
                 }
             });
 
-            // Tampilkan atau sembunyikan pilihan pemain pembuang jika Kong Buangan
             const discarderSec = document.getElementById('kongDiscarderSection');
             if (rule.isDiscard) {
                 discarderSec.classList.remove('hidden');
@@ -1100,7 +1066,6 @@
                 const wind = WINDS[p.windIdx];
                 const isKongPlayer = (idx === kongState.kongPlayerIdx);
 
-                // Tombol Pemain yang Kong
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.onclick = () => {
@@ -1122,7 +1087,6 @@
                 `;
                 pGrid.appendChild(btn);
 
-                // Tombol Pembuang Kartu (hanya 3 pemain selain pemain yang Kong)
                 if (!isKongPlayer) {
                     const isDiscarder = (idx === kongState.discarderIdx);
                     const dBtn = document.createElement('button');
@@ -1190,11 +1154,10 @@
             });
 
             const totalGain = deltas[kongState.kongPlayerIdx];
-            const label = `${kongPlayer.name} — ${rule.label} (+${totalGain})`;
             let subLabel = `${pWind.name} Hand ${table.handNumber} • Pembayaran Instan`;
             if (rule.isDiscard) {
                 const discarder = table.players[kongState.discarderIdx];
-                subLabel += ` • Buangan: ${discarder.name} (Pemain ${kongState.discarderIdx + 1})`;
+                subLabel += ` • Buangan: ${discarder.name}`;
             }
 
             table.history.push({
@@ -1214,7 +1177,6 @@
             showToast(`Pembayaran ${rule.label} untuk ${kongPlayer.name} (+${totalGain}) dicatat!`);
         }
 
-        // 7. HAPUS SKOR TERAKHIR, RESET & EXPORT CLIPBOARD
         function deleteLastScoreEntry() {
             const table = getCurrentTable();
             if (table.history.length === 0) return;
@@ -1257,8 +1219,6 @@
         function copySummaryToClipboard() {
             const table = getCurrentTable();
             const pWind = WINDS[table.prevailingWindIdx];
-            
-            // Urutkan pemain berdasarkan skor tertinggi
             const sortedPlayers = [...table.players].sort((a, b) => b.score - a.score);
 
             let text = `🀄 *MAHJONG POINT — MEJA ${activeTableId}*\n`;
@@ -1272,7 +1232,6 @@
             text += `────────────────────\n`;
             text += `_Dicatat via Mahjong Point_`;
 
-            // Salin menggunakan textarea sementara + document.execCommand('copy') agar kompatibel di iFrame
             const tempArea = document.createElement('textarea');
             tempArea.value = text;
             tempArea.style.position = 'fixed';
@@ -1288,7 +1247,6 @@
             document.body.removeChild(tempArea);
         }
 
-        // Helper keamanan HTML & Toast Notifikasi
         function escapeHtml(str) {
             return String(str)
                 .replace(/&/g, "&amp;")
@@ -1310,7 +1268,6 @@
             }, 2800);
         }
 
-        // Inisialisasi saat halaman siap
         window.addEventListener('DOMContentLoaded', () => {
             generateMeanderSVGPath();
             loadState();
